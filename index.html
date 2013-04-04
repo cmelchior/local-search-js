@@ -20,11 +20,21 @@
 
     <div class="container-fluid">
         <div class="span4">
+            <input name="web_workers" id="webworkers" value="your_value" type="checkbox"> Use Web Workers <br />
+            <input name="serialize_data" id="transferableObjects" value="your_value" type="checkbox"> Use Transferable Objects <br />
+            <br />
+
             <label for="search">Free text:</label>
             <input type="search" id="search" />
 
             <label for="search_threshold">Threshold:</label>
             <input type="search" id="search_threshold" />
+
+            <div>
+                <h5>Results</h5>
+                <div id="last_run">Last filter: ? ms.</div>
+                <div id="avg_run">Average filter: ? ms.</div>
+            </div>
         </div>
 
         <div class="span8" id="search_results">
