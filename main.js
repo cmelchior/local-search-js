@@ -1,14 +1,14 @@
-"use strict";
+'use strict';
 
 var cards = {};
-var worker = new Worker('search.js');
+var worker = new Worker('search_worker.js');
 var start;
 var workerTimes = [];
 var useWebWorkers = false;
 var useTransferableObjects = false;
 
 $(document).ready(function(){
-    initializeCheckboxListeners();
+    initializeEventListeners();
 
     $.getJSON("all_cards.json",
         function(data){
@@ -20,27 +20,13 @@ $(document).ready(function(){
             });
         })
 
+    // Response from worker
     worker.addEventListener('message', function(e) {
         filterCards(e.data);
     }, false);
-
-    $('#search').bind('input', function() {
-        start = new Date().getTime();
-        if (useWebWorkers) {
-            if (useTransferableObjects) {
-                worker.postMessage()
-
-                throw Error("Not implemented");
-            } else {
-                 worker.postMessage({ 'search': $(this).val(), 'cards':cards}); // Send data to our worker
-            }
-        } else {
-            doLocalSearch($(this).val(), cards);
-        }
-   });
 });
 
-function initializeCheckboxListeners() {
+function initializeEventListeners() {
     $('#webworkers').click(function() {
        useWebWorkers = $(this).is(':checked');
     });
@@ -48,11 +34,18 @@ function initializeCheckboxListeners() {
     $('#transferableObjects').click(function() {
        useTransferableObjects = $(this).is(':checked');
     });
+
+    $('#search').bind('input', function() {
+        doSearch();
+    });
+
+    $('#cost').bind('input', function() {
+        doSearch();
+    });
 }
 
 function calculateFilterTimes() {
     var time = new Date().getTime() - start;
-    console.log(time);
     workerTimes.push(time);
 
     $("#last_run").text("Last filter: " + time + " ms.");
@@ -65,31 +58,31 @@ function calculateFilterTimes() {
     $("#avg_run").text("Average: " + avg + " ms.");
 }
 
-function doLocalSearch(val, cards) {
-    console.log("Local search");
-    var cards = cards;
-    var searchValue = val;
-    var result = [];
+/**
+ * Find all search strings
+ */
+function doSearch() {
 
-    var i = 0;
-    cards.forEach(function(cardSet) {
-        cardSet['cards'].forEach(function (card) {
-            var regexp = new RegExp(".*?" + searchValue + ".*?" ,"gi");
+    var search = {};
+    search['name'] = $('#search').val();
+    search['cost'] = $('#cost').val();
 
-            if (card['name'].match(regexp)) {
-                result[i] = card;
-                i++;
-            }
-        });
-    });
-
-    filterCards(result);
+    start = new Date().getTime();
+    if (useWebWorkers) {
+        if (useTransferableObjects) {
+            throw Error("Not implemented");
+        } else {
+            worker.postMessage({ 'search': search, 'cards':cards}); // Send data to our worker
+        }
+    } else {
+        filterCards(DECKBUILDER.search(search, cards));
+    }
 }
 
 function filterCards(cards) {
     calculateFilterTimes();
     $('#search_results').empty();
     cards.forEach(function(card) {
-        $('#search_results').append('<div>'+ card["name"] +'</div>');
+        $('#search_results').append('<div>'+ card["name"] + ':' + card['cost'] + '</div>');
     });
 }

@@ -1,47 +1,66 @@
-"use strict";
-
-// Load card database
-
-
-
-self.addEventListener('message', function(e) {
-
-    var cards = e.data.cards;
-    var searchValue = e.data.search;
-    self.postMessage(doSearch(cards, searchValue));
-
-}, false);
-
-self.addEventListener('transferobject', function(e) {
-
-    var json = JSON.parse(Encoding.UTF8.GetString(e.data));
-    var cards = json['data'].cards;
-    var searchValue = json['data'].search;
-
-    self.postMessage(doSearch(cards, searchValue));
-
-}, false);
-
+'use strict';
 /**
- * Search a card database, return all cards matching a specific
- * @param cards
- * @param searchValue
- * @returns {Array}
+ * Search module for doing advanced search in the card database
  */
-function doSearch(cards, searchValue) {
-    var result = [];
+var DECKBUILDER = (function () {
 
-    var i = 0;
-    cards.forEach(function(cardSet) {
-        cardSet['cards'].forEach(function (card) {
-            var regexp = new RegExp(".*?" + searchValue + ".*?" ,"gi");
+    /**
+     * Check if the match string is contained within the value.
+     */
+    function checkString(match, value) {
+        if (value == null || value == undefined) return false; // A non-string never matches.
+        if (match == null || match == undefined || match == '') return true; // Empty search always match
 
-            if (card['name'].match(regexp)) {
-                result[i] = card;
-                i++;
-            }
-        });
-    });
+        var regexp = new RegExp(".*?" + match + ".*?" ,"gi");
+        return value.match(regexp);
+    };
 
-    return result;
-}
+    /**
+     * Check if a integer value fullfill the predicate
+     */
+    function checkInteger(predicate, cardValue) {
+        if (predicate == null) return true;     // Always match the empty predicate
+        if (cardValue == null || cardValue == undefined) return false;    // Never match if the value doesn't exists
+
+        var int = parseInt(cardValue, 10);
+        if (int == NaN) return false;
+        predicate = predicate.replace(/\$\{1\}/g, int);
+        if (!eval(predicate)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    function parse(expression) {
+        try {
+            return PEGJS.parse(expression);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    var publicMethods = {
+
+    /**
+     * Return all cards that match the search object
+     */
+    search : function(search, cards) {
+
+            var result = [];
+            var costSearch = parse(search['cost']);
+
+            cards.forEach(function(cardSet) {
+                cardSet['cards'].forEach(function (card) {
+                    if (!checkString(search['name'], card['name'])) return; // Check name
+                    if (!checkInteger(costSearch, card['cost'])) return; // Check cost
+                    result.push(card);
+                });
+            });
+
+            return result;
+        }
+    }
+
+    return publicMethods;
+})();
