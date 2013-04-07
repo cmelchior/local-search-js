@@ -72,7 +72,7 @@ function doSearch() {
         if (useTransferableObjects) {
             throw Error("Not implemented");
         } else {
-            worker.postMessage({ 'search': search, 'cards':cards}); // Send data to our worker
+            worker.postMessage({ 'search': search}); // Send data to our worker
         }
     } else {
         filterCards(DECKBUILDER.search(search, cards));
@@ -82,7 +82,13 @@ function doSearch() {
 function filterCards(cards) {
     calculateFilterTimes();
     $('#search_results').empty();
+
+    var fragment = document.createDocumentFragment();
     cards.forEach(function(card) {
-        $('#search_results').append('<div>'+ card["name"] + ':' + card['cost'] + '</div>');
+        var p = document.createElement("div");
+        p.appendChild(document.createTextNode(card["name"] + ':' + card['cost']));
+        fragment.appendChild(p);
     });
+
+    $('#search_results').append(fragment);
 }
